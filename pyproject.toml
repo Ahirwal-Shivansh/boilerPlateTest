@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eg-agent"
+version = "1.0.0"
+description = "Extensible Agent boilerplate with FastAPI WebSocket server, task execution, background jobs, acknowledgements, and tray support"
+authors = [
+    { name = "eventGraphia", email = "eventgraphia@eventgraphia.com" }
+]
+readme = "readme.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "click>=8.0",
+    "pystray>=0.19",
+    "Pillow>=9.5",
+    "sqlalchemy>=2.0",
+    "platformdirs==4.4.0",
+    "huey>=2.5.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "flake8",
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
+
+[project.scripts]
+eg-agent = "eg_agent.cli:main"
+eg-agent-worker = "eg_agent.worker:main"
+eg-agent-build = "eg_agent.build_cli:main"
+
+[tool.setuptools]
+packages = { find = { include = [
+    "eg_agent",
+    "installer_helper",
+] } }
+
+[tool.setuptools.package-data]
+eg_agent = [
+    "templates/build_windows.bat",
+    "templates/eg_agent_standalone.py",
+    "templates/build_macos.sh",
+]

@@ -1,0 +1,52 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Installer build outputs
+*.msi
+*.msm
+*.msp
+*.wixobj
+*.wixpdb
+*.wxs~
+*.pkg
+*.dmg
+
+# Packaging metadata
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+venv/
+__pycache__/
+**/__pycache__/
+
+eg_agent.egg-info/
+eg_agent.db
+tasks.py
+**/tasks.py
+db.py
+queues.py
+**/queues.py
+.env
+*.log
+*.db
+verification_db.py
