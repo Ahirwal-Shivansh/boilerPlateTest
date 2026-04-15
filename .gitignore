@@ -43,7 +43,6 @@ eg_agent.egg-info/
 eg_agent.db
 tasks.py
 **/tasks.py
-db.py
 queues.py
 **/queues.py
 .env
