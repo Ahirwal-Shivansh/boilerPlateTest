@@ -7,16 +7,18 @@ before project dependencies are installed in the current environment.
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError, distribution, version
 from typing import Optional
 
 
 _DEFAULT_DIST_NAME = "eg-agent"
 _REEXEC_GUARD_ENV = "EG_AGENT_SELF_UPDATE_DONE"
 _ENABLED_ENV = "EG_AGENT_SELF_UPDATE"
+_PIP_SOURCE_URL_ENV = "EG_AGENT_PIP_SOURCE_URL"
 
 
 def _in_virtualenv() -> bool:
@@ -28,6 +30,44 @@ def _get_installed_version(dist_name: str) -> Optional[str]:
         return version(dist_name)
     except PackageNotFoundError:
         return None
+
+
+def _get_vcs_install_url(dist_name: str) -> Optional[str]:
+    """
+    If this dist was installed from a VCS URL (PEP 610), return a pip-installable
+    spec such as: git+ssh://git@github.com/org/repo.git
+
+    Returns None for non-VCS installs (e.g. from PyPI).
+    """
+    try:
+        dist = distribution(dist_name)
+    except PackageNotFoundError:
+        return None
+
+    direct_url_text = None
+    try:
+        direct_url_text = dist.read_text("direct_url.json")
+    except Exception:
+        direct_url_text = None
+
+    if not direct_url_text:
+        return None
+
+    try:
+        data = json.loads(direct_url_text)
+    except Exception:
+        return None
+
+    vcs_info = data.get("vcs_info") or {}
+    if vcs_info.get("vcs") != "git":
+        return None
+
+    url = (data.get("url") or "").strip()
+    if not url:
+        return None
+
+    # Normalize to a pip VCS URL. PEP 610 urls are often "ssh://..." or "https://..."
+    return url if url.startswith("git+") else f"git+{url}"
 
 
 def ensure_latest_installed(
@@ -55,6 +95,12 @@ def ensure_latest_installed(
         or _DEFAULT_DIST_NAME
     )
 
+    source_url = os.environ.get(_PIP_SOURCE_URL_ENV)
+    if source_url and source_url.strip():
+        effective_spec = source_url.strip()
+    else:
+        effective_spec = _get_vcs_install_url(effective_dist) or effective_dist
+
     allow_global = (
         os.environ.get("EG_AGENT_ALLOW_GLOBAL_PIP", "false").lower() == "true"
     )
@@ -75,7 +121,7 @@ def ensure_latest_installed(
             "--disable-pip-version-check",
             "--no-input",
             "--upgrade",
-            effective_dist,
+            effective_spec,
         ],
         check=True,
     )
