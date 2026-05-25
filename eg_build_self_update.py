@@ -1,8 +1,8 @@
 """
-Self-update helper for the repository-level `build.py`.
+Canonical self-update helper for EG-Agent build entrypoints.
 
-This module intentionally does *not* import `eg_agent` so it can run even
-before project dependencies are installed in the current environment.
+Used by repository-level ``build.py`` (without importing ``eg_agent``) and
+re-exported from ``eg_agent.self_update`` for ``eg-agent-build``.
 """
 
 from __future__ import annotations
@@ -75,13 +75,18 @@ def ensure_latest_installed(
     dist_name: Optional[str] = None,
 ) -> None:
     """
-    Upgrade the dist in the active venv, then re-exec if it changed.
+    Ensure the installed ``eg-agent`` distribution is upgraded in the current
+    environment, then re-exec the process if it changed.
 
-    Env vars:
+    This intentionally runs *before* importing other build modules so an
+    updated package version is actually used for the build.
+
+    Environment variables:
     - EG_AGENT_SELF_UPDATE: if "false", skip self-update (default: "true")
-    - EG_AGENT_PIP_DIST: override dist name (default: "eg-agent")
+    - EG_AGENT_PIP_DIST: override the dist name (default: "eg-agent")
     - EG_AGENT_ALLOW_GLOBAL_PIP: if "true", allow running outside a venv
     - EG_AGENT_SELF_UPDATE_DONE: internal guard to prevent infinite re-exec
+    - EG_AGENT_PIP_SOURCE_URL: explicit pip install spec (overrides VCS detect)
     """
     if os.environ.get(_ENABLED_ENV, "true").lower() == "false":
         return
@@ -112,22 +117,25 @@ def ensure_latest_installed(
 
     before = _get_installed_version(effective_dist)
 
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--disable-pip-version-check",
-            "--no-input",
-            "--upgrade",
-            effective_spec,
-        ],
-        check=True,
-    )
+    cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "--no-input",
+        "--upgrade",
+        effective_spec,
+    ]
+    subprocess.run(cmd, check=True)
 
     after = _get_installed_version(effective_dist)
-    should_reexec = before is None or before != after
+    if before is None:
+        # Fresh install; re-exec to ensure imports resolve from site-packages.
+        should_reexec = True
+    else:
+        should_reexec = before != after
+
     if not should_reexec:
         return
 
